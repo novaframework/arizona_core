@@ -1,0 +1,13 @@
+{application, arizona_core, [
+    {description,
+        "Arizona Core - Template engine, rendering pipeline, and component model for Erlang"},
+    {vsn, semver},
+    {applications, [
+        % OTP dependencies
+        kernel,
+        stdlib,
+        syntax_tools
+    ]},
+    {licenses, ["Apache-2.0"]},
+    {links, [{"GitHub", "https://github.com/novaframework/arizona_core"}]}
+]}.

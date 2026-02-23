@@ -1,0 +1,92 @@
+{
+  "name": "@arizona-framework/core-client",
+  "version": "0.1.0",
+  "description": "JavaScript client library for Arizona Core",
+  "type": "module",
+  "main": "./priv/static/assets/js/index.min.js",
+  "module": "./priv/static/assets/js/index.min.js",
+  "types": "./priv/static/assets/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./priv/static/assets/types/index.d.ts",
+      "import": "./priv/static/assets/js/index.min.js",
+      "require": "./priv/static/assets/js/index.min.js"
+    },
+    "./logger": {
+      "types": "./priv/static/assets/types/logger/index.d.ts",
+      "import": "./priv/static/assets/js/logger/index.min.js",
+      "require": "./priv/static/assets/js/logger/index.min.js"
+    },
+    "./logger/console": {
+      "types": "./priv/static/assets/types/logger/arizona-console-logger.d.ts",
+      "import": "./priv/static/assets/js/logger/arizona-console-logger.min.js",
+      "require": "./priv/static/assets/js/logger/arizona-console-logger.min.js"
+    }
+  },
+  "files": [
+    "README.md",
+    "LICENSE.md",
+    "package.json",
+    "priv/static/assets/js/**/*",
+    "priv/static/assets/types/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/novaframework/arizona_core.git"
+  },
+  "homepage": "https://github.com/novaframework/arizona_core",
+  "bugs": {
+    "url": "https://github.com/novaframework/arizona_core/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "browserslist": ["defaults", "not IE 11"],
+  "keywords": [
+    "arizona",
+    "framework",
+    "javascript",
+    "client",
+    "websocket",
+    "realtime"
+  ],
+  "author": "William Fank Thomé <willilamthome@hotmail.com>",
+  "license": "Apache-2.0",
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vite build",
+    "build:analyze": "ANALYZE=true vite build",
+    "build:dev": "vite build --mode development",
+    "format": "prettier --write \"./*.js\" \"./assets/**/*.js\" \"**/*.json\" \"**/*.yml\" --config prettier.config.js --ignore-path .gitignore --ignore-path .prettierignore",
+    "format:check": "prettier --check \"./*.js\" \"./assets/**/*.js\" \"**/*.json\" \"**/*.yml\" --config prettier.config.js --ignore-path .gitignore --ignore-path .prettierignore",
+    "lint:js": "eslint eslint.config.js --fix",
+    "lint:js:check": "eslint eslint.config.js",
+    "test:unit": "vitest run",
+    "test:unit:coverage": "vitest run --coverage",
+    "ci": "npm run format:check && npm run lint:js:check && npm run test:unit",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "morphdom": "2.7.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@vitest/coverage-v8": "4.0.18",
+    "eslint": "10.0.0",
+    "globals": "17.3.0",
+    "prettier": "3.8.1",
+    "rollup-plugin-banner2": "1.3.1",
+    "rollup-plugin-filesize": "10.0.0",
+    "rollup-plugin-license": "3.6.0",
+    "rollup-plugin-visualizer": "6.0.5",
+    "uglify-js": "3.19.3",
+    "vite": "7.3.1",
+    "vite-plugin-dts": "4.5.4",
+    "vite-plugin-eslint": "1.8.1",
+    "vite-tsconfig-paths": "6.1.1",
+    "vitest": "4.0.18"
+  }
+}
