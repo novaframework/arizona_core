@@ -54,6 +54,8 @@ Built on Erlang's `pg` module which automatically handles:
 %% API function exports
 %% --------------------------------------------------------------------
 
+-export([set_scope/1]).
+-export([get_scope/0]).
 -export([broadcast/2]).
 -export([broadcast_from/3]).
 -export([join/2]).
@@ -64,6 +66,8 @@ Built on Erlang's `pg` module which automatically handles:
 %% Ignore xref warnings
 %% --------------------------------------------------------------------
 
+-ignore_xref([set_scope/1]).
+-ignore_xref([get_scope/0]).
 -ignore_xref([broadcast/2]).
 -ignore_xref([broadcast_from/3]).
 -ignore_xref([join/2]).
@@ -83,8 +87,37 @@ Built on Erlang's `pg` module which automatically handles:
 -nominal topic() :: binary().
 
 %% --------------------------------------------------------------------
+%% Macros
+%% --------------------------------------------------------------------
+
+-define(SCOPE_KEY, arizona_pubsub_scope).
+-define(DEFAULT_SCOPE, ?MODULE).
+
+%% --------------------------------------------------------------------
 %% API function definitions
 %% --------------------------------------------------------------------
+
+-doc ~"""
+Sets the `pg` scope used for pubsub operations.
+
+Intended for host frameworks (e.g., Nova) to share their existing `pg`
+scope with Arizona, allowing both to operate on the same process groups.
+Must be called before any pubsub operations, typically during application
+startup.
+""".
+-spec set_scope(Scope) -> ok when
+    Scope :: atom().
+set_scope(Scope) when is_atom(Scope) ->
+    persistent_term:put(?SCOPE_KEY, Scope).
+
+-doc ~"""
+Returns the current `pg` scope used for pubsub operations.
+
+Defaults to `arizona_pubsub` if no custom scope has been set.
+""".
+-spec get_scope() -> atom().
+get_scope() ->
+    persistent_term:get(?SCOPE_KEY, ?DEFAULT_SCOPE).
 
 -doc ~"""
 Broadcasts a message to all subscribers of a topic.
@@ -134,7 +167,7 @@ receive all future broadcasts to this topic until it leaves or terminates.
     Topic :: topic(),
     Pid :: pid().
 join(Topic, Pid) when is_binary(Topic), is_pid(Pid) ->
-    pg:join(?MODULE, Topic, Pid).
+    pg:join(get_scope(), Topic, Pid).
 
 -doc ~"""
 Unsubscribes a process from a topic.
@@ -146,7 +179,7 @@ if successfully removed, `not_joined` if the process wasn't subscribed.
     Topic :: topic(),
     Pid :: pid().
 leave(Topic, Pid) when is_binary(Topic), is_pid(Pid) ->
-    pg:leave(?MODULE, Topic, Pid).
+    pg:leave(get_scope(), Topic, Pid).
 
 -doc ~"""
 Returns all processes subscribed to a topic.
@@ -157,7 +190,7 @@ Useful for debugging or metrics collection.
 -spec get_members(Topic) -> [pid()] when
     Topic :: topic().
 get_members(Topic) when is_binary(Topic) ->
-    pg:get_members(?MODULE, Topic).
+    pg:get_members(get_scope(), Topic).
 
 %% --------------------------------------------------------------------
 %% Internal functions
