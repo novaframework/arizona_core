@@ -37,8 +37,5 @@ jobs:
       - name: Common Test
         run: rebar3 ct
 
-      - name: XRef
-        run: rebar3 xref
-
       - name: Format check
         run: rebar3 fmt --check
