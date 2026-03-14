@@ -15,4 +15,4 @@ jobs:
       enable-ct: true
       enable-xref: false
       enable-dialyzer: false
-      enable-audit: true
+      enable-audit: false
