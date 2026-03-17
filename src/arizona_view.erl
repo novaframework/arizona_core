@@ -147,7 +147,7 @@ terminate(_Reason, _View) ->
     Result :: handle_info_result().
 
 -callback terminate(Reason, View) -> Result when
-    Reason :: arizona_websocket:terminate_reason(),
+    Reason :: arizona_live:terminate_reason(),
     View :: view(),
     Result :: term().
 
@@ -244,7 +244,7 @@ terminate(normal, _View) ->
 ```
 """.
 -spec call_terminate_callback(Reason, View) -> Result when
-    Reason :: arizona_websocket:terminate_reason(),
+    Reason :: arizona_live:terminate_reason(),
     View :: view(),
     Result :: term().
 call_terminate_callback(Reason, #view{state = State} = View) ->
