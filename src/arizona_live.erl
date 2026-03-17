@@ -74,7 +74,11 @@ true = arizona_live:is_connected(LivePid).
 %% Ignore xref warnings
 %% --------------------------------------------------------------------
 
+-ignore_xref([start_link/4]).
 -ignore_xref([is_connected/1]).
+-ignore_xref([get_view/1]).
+-ignore_xref([initial_render/1]).
+-ignore_xref([handle_event/4]).
 
 %% --------------------------------------------------------------------
 %% Types exports
