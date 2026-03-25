@@ -294,6 +294,17 @@ handle_cast({handle_event, StatefulIdOrUndefined, Event, Params}, #state{} = Sta
     State1 :: state().
 handle_info({pubsub_message, Topic, Data}, #state{} = State) ->
     handle_view_event(Topic, Data, State);
+handle_info({'DOWN', _Ref, process, _Pid, {async_result, Key, Value}}, #state{} = State) ->
+    handle_async_result(Key, {ok, Value}, State);
+handle_info({'DOWN', _Ref, process, _Pid, normal}, #state{} = State) ->
+    {noreply, State};
+handle_info({'DOWN', _Ref, process, _Pid, Reason}, #state{} = State) ->
+    case Reason of
+        {async_result, Key, Value} ->
+            handle_async_result(Key, {ok, Value}, State);
+        _ ->
+            handle_view_info({'DOWN', _Ref, process, _Pid, Reason}, State)
+    end;
 handle_info(Info, #state{} = State) ->
     handle_view_info(Info, State).
 
@@ -353,6 +364,19 @@ handle_actions_response(StatefulId, Diff, HierarchicalStructure, Actions, State)
     State#state.transport_pid !
         {actions_response, StatefulId, Diff, HierarchicalStructure, Actions},
     ok.
+
+handle_async_result(Key, Result, State) ->
+    View = State#state.view,
+    ViewState = arizona_view:get_state(View),
+    UpdatedState = arizona_stateful:put_binding(Key, {async, Result}, ViewState),
+    UpdatedView = arizona_view:update_state(UpdatedState, View),
+    undefined = arizona_hierarchical_dict:set_structure(#{}),
+    {Diff, DiffView} = arizona_differ:diff_view(UpdatedView),
+    HierarchicalStructure = arizona_hierarchical_dict:clear(),
+    DiffViewState = arizona_view:get_state(DiffView),
+    ViewId = arizona_stateful:get_binding(id, DiffViewState),
+    ok = handle_actions_response(ViewId, Diff, HierarchicalStructure, [], State),
+    {noreply, State#state{view = DiffView}}.
 
 handle_view_info(Info, State) ->
     {Actions, UpdatedView} = arizona_view:call_handle_info_callback(Info, State#state.view),
