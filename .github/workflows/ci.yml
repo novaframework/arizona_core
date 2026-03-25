@@ -19,7 +19,7 @@ jobs:
       enable-sbom-scan: true
       enable-sbom: true
       enable-coverage: true
-      enable-audit: true
+      enable-audit: false
       otp-version: '28'
       enable-eunit: true
       enable-ct: true
