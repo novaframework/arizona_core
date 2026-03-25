@@ -123,12 +123,19 @@ and creates a call to `arizona_template:render_list_template/3`.
 transform_render_list(Module, Line, FunArg, ListArg, OptionsArg, CompileOpts) ->
     case erl_syntax:type(FunArg) of
         implicit_fun ->
-            %% Function reference like fun render_row/1 — call at runtime
+            %% Function reference like fun render_row/1 — wrap in inline fun
+            %% to avoid compiler issues with implicit_fun in generated code
+            Var = erl_syntax:variable('_ArizonaItem'),
+            InlineFun = erl_syntax:fun_expr([
+                erl_syntax:clause([Var], none, [
+                    erl_syntax:application(FunArg, [Var])
+                ])
+            ]),
             TemplateModule = erl_syntax:atom(arizona_template),
             TemplateFunction = erl_syntax:atom(render_list_runtime),
             erl_syntax:application(
                 erl_syntax:module_qualifier(TemplateModule, TemplateFunction), [
-                    FunArg, ListArg, OptionsArg
+                    InlineFun, ListArg, OptionsArg
                 ]
             );
         _ ->
@@ -170,11 +177,17 @@ Extracts the callback function and converts it to a compiled template.
 transform_render_map(Module, Line, FunArg, MapArg, OptionsArg, CompileOpts) ->
     case erl_syntax:type(FunArg) of
         implicit_fun ->
+            Var = erl_syntax:variable('_ArizonaItem'),
+            InlineFun = erl_syntax:fun_expr([
+                erl_syntax:clause([Var], none, [
+                    erl_syntax:application(FunArg, [Var])
+                ])
+            ]),
             TemplateModule = erl_syntax:atom(arizona_template),
             TemplateFunction = erl_syntax:atom(render_map_runtime),
             erl_syntax:application(
                 erl_syntax:module_qualifier(TemplateModule, TemplateFunction), [
-                    FunArg, MapArg, OptionsArg
+                    InlineFun, MapArg, OptionsArg
                 ]
             );
         _ ->
