@@ -835,15 +835,19 @@ compile-time optimized. Calls the function for each item at runtime.
     Item :: dynamic(),
     Options :: render_options(),
     Callback :: render_callback().
-render_list_runtime(ItemCallback, List, Options) ->
-    %% Call the function for the first item to get the template structure,
-    %% then use that template for all items via render_list_template.
-    case List of
-        [] ->
-            render_list_template(empty_template(), [], Options);
-        [First | _] ->
-            Template = ItemCallback(First),
-            render_list_template(Template, List, Options)
+render_list_runtime(ItemCallback, List, _Options) ->
+    %% Runtime fallback: call the function for each item independently,
+    %% render each template, and return a callback that concatenates results.
+    fun
+        (render, _ParentId, _ElementIndex, View) ->
+            HtmlParts = [render_single_item(ItemCallback(Item), View) || Item <- List],
+            {HtmlParts, View};
+        (diff, _ParentId, _ElementIndex, View) ->
+            %% For diffs, re-render everything (no incremental diffing for runtime lists)
+            HtmlParts = [render_single_item(ItemCallback(Item), View) || Item <- List],
+            {HtmlParts, View};
+        (hierarchical, _ParentId, _ElementIndex, View) ->
+            {[], View}
     end.
 
 -spec render_map_runtime(ItemCallback, Map, Options) -> Callback when
@@ -853,24 +857,44 @@ render_list_runtime(ItemCallback, List, Options) ->
     Value :: dynamic(),
     Options :: render_options(),
     Callback :: render_callback().
-render_map_runtime(ItemCallback, Map, Options) ->
+render_map_runtime(ItemCallback, Map, _Options) ->
     List = maps:to_list(Map),
-    case List of
-        [] ->
-            render_map_template(empty_template(), Map, Options);
-        [First | _] ->
-            Template = ItemCallback(First),
-            render_map_template(Template, Map, Options)
+    fun
+        (render, _ParentId, _ElementIndex, View) ->
+            HtmlParts = [render_single_item(ItemCallback(Item), View) || Item <- List],
+            {HtmlParts, View};
+        (diff, _ParentId, _ElementIndex, View) ->
+            HtmlParts = [render_single_item(ItemCallback(Item), View) || Item <- List],
+            {HtmlParts, View};
+        (hierarchical, _ParentId, _ElementIndex, View) ->
+            {[], View}
     end.
 
-empty_template() ->
-    #template{
-        static = [<<>>],
-        dynamic = {},
-        dynamic_sequence = [],
-        dynamic_anno = [],
-        fingerprint = <<>>
-    }.
+render_single_item(#template{static = Static, dynamic = Dynamic, dynamic_sequence = Seq}, _View) ->
+    DynamicValues = [element(I, Dynamic) || I <- Seq],
+    RenderedDynamic = [case V of
+        F when is_function(F, 0) -> F();
+        F when is_function(F, 1) -> F(undefined);
+        V -> V
+    end || V <- DynamicValues],
+    zip_static_dynamic(Static, RenderedDynamic, []);
+render_single_item(Bin, _View) when is_binary(Bin) ->
+    Bin.
+
+zip_static_dynamic([], [], Acc) ->
+    iolist_to_binary(lists:reverse(Acc));
+zip_static_dynamic([S | SRest], [], Acc) ->
+    zip_static_dynamic(SRest, [], [S | Acc]);
+zip_static_dynamic([], [D | DRest], Acc) ->
+    zip_static_dynamic([], DRest, [to_binary(D) | Acc]);
+zip_static_dynamic([S | SRest], [D | DRest], Acc) ->
+    zip_static_dynamic(SRest, DRest, [to_binary(D), S | Acc]).
+
+to_binary(B) when is_binary(B) -> B;
+to_binary(I) when is_integer(I) -> integer_to_binary(I);
+to_binary(L) when is_list(L) -> iolist_to_binary(L);
+to_binary(T) -> iolist_to_binary(io_lib:format(~"~p", [T])).
+
 
 -spec render_map(ItemCallback, Map) -> Callback when
     ItemCallback :: fun((Item) -> arizona_template:template()),
