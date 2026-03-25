@@ -121,27 +121,36 @@ and creates a call to `arizona_template:render_list_template/3`.
     CompileOpts :: [compile:option()],
     AST :: erl_syntax:syntaxTree().
 transform_render_list(Module, Line, FunArg, ListArg, OptionsArg, CompileOpts) ->
-    try
-        % Extract the item parameter and template string from the function
-        TemplateAST = extract_callback_function_body(
-            Module, Line, FunArg, CompileOpts
-        ),
-
-        % Create application: arizona_template:render_list_template(Template, List, Options)
-        TemplateModule = erl_syntax:atom(arizona_template),
-        TemplateFunction = erl_syntax:atom(render_list_template),
-        erl_syntax:application(
-            erl_syntax:module_qualifier(TemplateModule, TemplateFunction), [
-                TemplateAST, ListArg, OptionsArg
-            ]
-        )
-    catch
-        Class:Reason:StackTrace ->
-            error(
-                arizona_render_list_transformation_failed,
-                none,
-                error_info({Module, Line, Class, Reason, StackTrace})
-            )
+    case erl_syntax:type(FunArg) of
+        implicit_fun ->
+            %% Function reference like fun render_row/1 — call at runtime
+            TemplateModule = erl_syntax:atom(arizona_template),
+            TemplateFunction = erl_syntax:atom(render_list_runtime),
+            erl_syntax:application(
+                erl_syntax:module_qualifier(TemplateModule, TemplateFunction), [
+                    FunArg, ListArg, OptionsArg
+                ]
+            );
+        _ ->
+            try
+                TemplateAST = extract_callback_function_body(
+                    Module, Line, FunArg, CompileOpts
+                ),
+                TemplateModule = erl_syntax:atom(arizona_template),
+                TemplateFunction = erl_syntax:atom(render_list_template),
+                erl_syntax:application(
+                    erl_syntax:module_qualifier(TemplateModule, TemplateFunction), [
+                        TemplateAST, ListArg, OptionsArg
+                    ]
+                )
+            catch
+                Class:Reason:StackTrace ->
+                    error(
+                        arizona_render_list_transformation_failed,
+                        none,
+                        error_info({Module, Line, Class, Reason, StackTrace})
+                    )
+            end
     end.
 
 -doc ~"""
@@ -159,28 +168,35 @@ Extracts the callback function and converts it to a compiled template.
     CompileOpts :: [compile:option()],
     AST :: erl_syntax:syntaxTree().
 transform_render_map(Module, Line, FunArg, MapArg, OptionsArg, CompileOpts) ->
-    try
-        % Extract the item parameter and template string from the function
-        % Reuse the same extraction logic as render_list since both use fun(Item) -> Template
-        TemplateAST = extract_callback_function_body(
-            Module, Line, FunArg, CompileOpts
-        ),
-
-        % Create application: arizona_template:render_map_template(Template, Map, Options)
-        TemplateModule = erl_syntax:atom(arizona_template),
-        TemplateFunction = erl_syntax:atom(render_map_template),
-        erl_syntax:application(
-            erl_syntax:module_qualifier(TemplateModule, TemplateFunction), [
-                TemplateAST, MapArg, OptionsArg
-            ]
-        )
-    catch
-        Class:Reason:StackTrace ->
-            error(
-                arizona_render_map_transformation_failed,
-                none,
-                error_info({Module, Line, Class, Reason, StackTrace})
-            )
+    case erl_syntax:type(FunArg) of
+        implicit_fun ->
+            TemplateModule = erl_syntax:atom(arizona_template),
+            TemplateFunction = erl_syntax:atom(render_map_runtime),
+            erl_syntax:application(
+                erl_syntax:module_qualifier(TemplateModule, TemplateFunction), [
+                    FunArg, MapArg, OptionsArg
+                ]
+            );
+        _ ->
+            try
+                TemplateAST = extract_callback_function_body(
+                    Module, Line, FunArg, CompileOpts
+                ),
+                TemplateModule = erl_syntax:atom(arizona_template),
+                TemplateFunction = erl_syntax:atom(render_map_template),
+                erl_syntax:application(
+                    erl_syntax:module_qualifier(TemplateModule, TemplateFunction), [
+                        TemplateAST, MapArg, OptionsArg
+                    ]
+                )
+            catch
+                Class:Reason:StackTrace ->
+                    error(
+                        arizona_render_map_transformation_failed,
+                        none,
+                        error_info({Module, Line, Class, Reason, StackTrace})
+                    )
+            end
     end.
 
 %% Extract item parameter and template string from callback function

@@ -77,10 +77,12 @@ be created at compile-time via parse transforms or at runtime.
 -export([render_list/3]).
 -export([render_list_template/2]).
 -export([render_list_template/3]).
+-export([render_list_runtime/3]).
 -export([render_map/2]).
 -export([render_map/3]).
 -export([render_map_template/2]).
 -export([render_map_template/3]).
+-export([render_map_runtime/3]).
 
 %% --------------------------------------------------------------------
 %% Ignore xref warnings
@@ -108,10 +110,12 @@ be created at compile-time via parse transforms or at runtime.
 -ignore_xref([render_list/3]).
 -ignore_xref([render_list_template/2]).
 -ignore_xref([render_list_template/3]).
+-ignore_xref([render_list_runtime/3]).
 -ignore_xref([render_map/2]).
 -ignore_xref([render_map/3]).
 -ignore_xref([render_map_template/2]).
 -ignore_xref([render_map_template/3]).
+-ignore_xref([render_map_runtime/3]).
 
 %% --------------------------------------------------------------------
 %% Types exports
@@ -818,6 +822,55 @@ render_list_template(#template{} = Template, List, Options) ->
         (hierarchical, ParentId, ElementIndex, View) ->
             arizona_hierarchical:hierarchical_list(Template, List, ParentId, ElementIndex, View)
     end.
+
+-doc ~"""
+Runtime list rendering for function references (fun render_row/1).
+
+Called when the parse transform detects an implicit_fun that cannot be
+compile-time optimized. Calls the function for each item at runtime.
+""".
+-spec render_list_runtime(ItemCallback, List, Options) -> Callback when
+    ItemCallback :: fun((Item) -> arizona_template:template()),
+    List :: [Item],
+    Item :: dynamic(),
+    Options :: render_options(),
+    Callback :: render_callback().
+render_list_runtime(ItemCallback, List, Options) ->
+    %% Call the function for the first item to get the template structure,
+    %% then use that template for all items via render_list_template.
+    case List of
+        [] ->
+            render_list_template(empty_template(), [], Options);
+        [First | _] ->
+            Template = ItemCallback(First),
+            render_list_template(Template, List, Options)
+    end.
+
+-spec render_map_runtime(ItemCallback, Map, Options) -> Callback when
+    ItemCallback :: fun(({Key, Value}) -> arizona_template:template()),
+    Map :: #{Key => Value},
+    Key :: dynamic(),
+    Value :: dynamic(),
+    Options :: render_options(),
+    Callback :: render_callback().
+render_map_runtime(ItemCallback, Map, Options) ->
+    List = maps:to_list(Map),
+    case List of
+        [] ->
+            render_map_template(empty_template(), Map, Options);
+        [First | _] ->
+            Template = ItemCallback(First),
+            render_map_template(Template, Map, Options)
+    end.
+
+empty_template() ->
+    #template{
+        static = [<<>>],
+        dynamic = {},
+        dynamic_sequence = [],
+        dynamic_anno = [],
+        fingerprint = <<>>
+    }.
 
 -spec render_map(ItemCallback, Map) -> Callback when
     ItemCallback :: fun((Item) -> arizona_template:template()),
